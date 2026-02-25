@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTI тест | Единая статистика для админа</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .app-container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .question-item {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 15px;
+        }
+        .question-text {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .option {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .option:hover {
+            border-color: #4299e1;
+            transform: translateY(-2px);
+        }
+        .option.selected {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+        .option-code {
+            font-weight: 700;
+            color: #2b6cb0;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+        }
+        .btn.secondary {
+            background: #718096;
+        }
+        .btn.secondary:hover {
+            background: #4a5568;
+        }
+        .btn.danger {
+            background: #f56565;
+        }
+        .btn.danger:hover {
+            background: #e53e3e;
+        }
+        .admin-section {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .admin-password {
+            margin-bottom: 20px;
+        }
+        .admin-password input {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .stat-card .type {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #2b6cb0;
+        }
+        .stat-card .count {
+            font-size: 2em;
+            font-weight: 800;
+            color: #2d3748;
+        }
+        .chart-bar-container {
+            margin: 15px 0;
+        }
+        .chart-bar {
+            height: 30px;
+            background: #4299e1;
+            border-radius: 15px;
+            color: white;
+            line-height: 30px;
+            padding-left: 10px;
+            font-weight: 600;
+            margin-top: 5px;
+            transition: width 0.3s;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+        .result-badge {
+            font-size: 3em;
+            font-weight: 800;
+            color: #2b6cb0;
+            text-align: center;
+            margin: 20px 0;
+        }
+        #accessDenied {
+            color: #e53e3e;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app">
+        <h1>🧠 Определение типа личности</h1>
+        
+        <!-- Основной тест -->
+        <div id="testSection" class="card">
+            <h2>Ответьте на 8 вопросов</h2>
+            <div id="questionsContainer"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" id="submitTest" disabled>Получить результат</button>
+                <button class="btn secondary" id="showAdminBtn">🔐 Вход для админа</button>
+            </div>
+        </div>
+
+        <!-- Результат пользователя -->
+        <div id="resultSection" class="card hidden">
+            <div style="text-align: center">
+                <h2>Ваш тип личности</h2>
+                <div id="userResultType" class="result-badge">ISTJ</div>
+                <div id="userResultDesc" style="margin: 20px 0; padding: 20px; background: #ebf8ff; border-radius: 10px;">
+                    Описание типа...
+                </div>
+                <button class="btn" id="newTestBtn">Пройти заново</button>
+                <button class="btn secondary" id="userToAdminBtn">📊 Статистика (только админ)</button>
+            </div>
+        </div>
+
+        <!-- Админ-панель (только с паролем) -->
+        <div id="adminSection" class="card hidden">
+            <div class="admin-header">
+                <h2>📊 Общая статистика</h2>
+                <button class="btn secondary" id="backFromAdmin">← Назад</button>
+            </div>
+            
+            <!-- Форма входа для админа -->
+            <div id="adminLogin" class="admin-password">
+                <h3>Введите пароль администратора</h3>
+                <input type="password" id="adminPassword" placeholder="Пароль">
+                <button class="btn" id="checkPasswordBtn">Войти</button>
+                <div id="accessDenied" class="hidden">Неверный пароль</div>
+            </div>
+
+            <!-- Статистика (видна только после ввода пароля) -->
+            <div id="adminStats" class="hidden">
+                <div style="margin-bottom: 20px;">
+                    <p>Всего прохождений: <strong id="totalCount">0</strong></p>
+                    <button class="btn danger" id="clearStatsBtn">Очистить статистику</button>
+                </div>
+
+                <div id="statsGrid" class="stats-grid"></div>
+
+                <h3>Распределение типов</h3>
+                <div id="chartContainer"></div>
+                
+                <p style="margin-top: 20px; color: #718096; font-size: 0.9em;">
+                    * Все результаты сохраняются в облаке (Google Sheets). Доступ к статистике только у админа.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация Google Sheets (ваши личные данные)
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2Jn7B2jQtkz7QNvM_zVnL5kQqL5kQqL5kQqL5kQq/exec'; // ЗАМЕНИТЕ НА ВАШУ ССЫЛКУ
+        const ADMIN_PASSWORD = 'admin123'; // Пароль для доступа к статистике
+
+        // Вопросы теста
+        const questions = [
+            {
+                text: "1. После работы вы предпочитаете:",
+                left: { code: "E", desc: "Встретиться с друзьями" },
+                right: { code: "I", desc: "Побыть в тишине" }
+            },
+            {
+                text: "2. При решении задач вы опираетесь на:",
+                left: { code: "S", desc: "Факты и опыт" },
+                right: { code: "N", desc: "Интуицию и идеи" }
+            },
+            {
+                text: "3. В спорах вы чаще:",
+                left: { code: "T", desc: "Опираетесь на логику" },
+                right: { code: "F", desc: "Учитываете чувства" }
+            },
+            {
+                text: "4. Ваш стиль жизни:",
+                left: { code: "J", desc: "Планирование и порядок" },
+                right: { code: "P", desc: "Гибкость и спонтанность" }
+            },
+            {
+                text: "5. В компании вы:",
+                left: { code: "E", desc: "Заводите разговор первым" },
+                right: { code: "I", desc: "Ждете, когда обратятся" }
+            },
+            {
+                text: "6. Что важнее при обучении:",
+                left: { code: "S", desc: "Практические примеры" },
+                right: { code: "N", desc: "Общие концепции" }
+            },
+            {
+                text: "7. Принимая решение, вы:",
+                left: { code: "T", desc: "Анализируете плюсы/минусы" },
+                right: { code: "F", desc: "Слушаете сердце" }
+            },
+            {
+                text: "8. Ваше рабочее место:",
+                left: { code: "J", desc: "Все на своих местах" },
+                right: { code: "P", desc: "Творческий беспорядок" }
+            }
+        ];
+
+        // Описания типов
+        const descriptions = {
+            "ISTJ": "Организованный, фактологичный, надежный. Ценит порядок.",
+            "ISFJ": "Заботливый, внимательный, преданный. Защитник традиций.",
+            "INFJ": "Идеалист, проницательный, стремится помогать.",
+            "INTJ": "Стратег, аналитик, независимый. Любит сложные задачи.",
+            "ISTP": "Мастер, практичный, любит работать руками.",
+            "ISFP": "Художник, чувствительный, ценит красоту.",
+            "INFP": "Целитель, ищет смысл, креативный.",
+            "INTP": "Мыслитель, логик, любит теории.",
+            "ESTP": "Непоседа, энергичный, рисковый.",
+            "ESFP": "Исполнитель, артистичный, любит внимание.",
+            "ENFP": "Борец, энтузиаст, креативный.",
+            "ENTP": "Изобретатель, любит спорить, новатор.",
+            "ESTJ": "Руководитель, решительный, требовательный.",
+            "ESFJ": "Консул, общительный, заботливый.",
+            "ENFJ": "Наставник, харизматичный, вдохновляет.",
+            "ENTJ": "Командир, амбициозный, стратег."
+        };
+
+        // Состояние приложения
+        let selectedAnswers = new Array(8).fill(null);
+        let currentUserType = null;
+        let isAdminAuthenticated = false;
+
+        // DOM элементы
+        const testSection = document.getElementById('testSection');
+        const resultSection = document.getElementById('resultSection');
+        const adminSection = document.getElementById('adminSection');
+        const questionsContainer = document.getElementById('questionsContainer');
+        const submitBtn = document.getElementById('submitTest');
+        const showAdminBtn = document.getElementById('showAdminBtn');
+        const newTestBtn = document.getElementById('newTestBtn');
+        const userToAdminBtn = document.getElementById('userToAdminBtn');
+        const backFromAdmin = document.getElementById('backFromAdmin');
+        const checkPasswordBtn = document.getElementById('checkPasswordBtn');
+        const adminPassword = document.getElementById('adminPassword');
+        const accessDenied = document.getElementById('accessDenied');
+        const adminLogin = document.getElementById('adminLogin');
+        const adminStats = document.getElementById('adminStats');
+        const clearStatsBtn = document.getElementById('clearStatsBtn');
+        const totalCountSpan = document.getElementById('totalCount');
+        const statsGrid = document.getElementById('statsGrid');
+        const chartContainer = document.getElementById('chartContainer');
+        const userResultType = document.getElementById('userResultType');
+        const userResultDesc = document.getElementById('userResultDesc');
+
+        // Отрисовка вопросов
+        function renderQuestions() {
+            let html = '';
+            questions.forEach((q, index) => {
+                html += `
+                    <div class="question-item">
+                        <div class="question-text">${q.text}</div>
+                        <div class="options">
+                            <div class="option ${selectedAnswers[index] === 'left' ? 'selected' : ''}" 
+                                 onclick="selectAnswer(${index}, 'left')">
+                                <div class="option-code">${q.left.code}</div>
+                                <div>${q.left.desc}</div>
+                            </div>
+                            <div class="option ${selectedAnswers[index] === 'right' ? 'selected' : ''}" 
+                                 onclick="selectAnswer(${index}, 'right')">
+                                <div class="option-code">${q.right.code}</div>
+                                <div>${q.right.desc}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            questionsContainer.innerHTML = html;
+        }
+
+        // Выбор ответа
+        window.selectAnswer = function(index, side) {
+            selectedAnswers[index] = side;
+            renderQuestions();
+            submitBtn.disabled = selectedAnswers.includes(null);
+        };
+
+        // Вычисление типа личности
+        function calculateType(answers) {
+            const counts = { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 };
+            answers.forEach((side, idx) => {
+                if (side === 'left') counts[questions[idx].left.code]++;
+                else counts[questions[idx].right.code]++;
+            });
+            return (counts.E >= counts.I ? 'E' : 'I') +
+                   (counts.S >= counts.N ? 'S' : 'N') +
+                   (counts.T >= counts.F ? 'T' : 'F') +
+                   (counts.J >= counts.P ? 'J' : 'P');
+        }
+
+        // Сохранение результата в Google Sheets
+        async function saveToGoogleSheets(type) {
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: type,
+                        timestamp: new Date().toISOString(),
+                        action: 'add'
+                    })
+                });
+                console.log('Результат отправлен');
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+            }
+        }
+
+        // Загрузка статистики из Google Sheets
+        async function loadStatsFromGoogleSheets() {
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=get');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                return { types: [], total: 0 };
+            }
+        }
+
+        // Отрисовка статистики
+        async function renderAdminStats() {
+            const data = await loadStatsFromGoogleSheets();
+            const types = data.types || {};
+            const total = data.total || 0;
+            
+            totalCountSpan.textContent = total;
+            
+            // Сетка статистики
+            let gridHtml = '';
+            let chartHtml = '';
+            
+            const allTypes = Object.keys(descriptions);
+            allTypes.sort().forEach(type => {
+                const count = types[type] || 0;
+                const percent = total ? ((count / total) * 100).toFixed(1) : '0';
+                
+                gridHtml += `
+                    <div class="stat-card">
+                        <div class="type">${type}</div>
+                        <div class="count">${count}</div>
+                        <div>${percent}%</div>
+                    </div>
+                `;
+                
+                chartHtml += `
+                    <div class="chart-bar-container">
+                        <div style="display: flex; justify-content: space-between">
+                            <span><strong>${type}</strong></span>
+                            <span>${count} (${percent}%)</span>
+                        </div>
+                        <div class="chart-bar" style="width: ${percent}%">${count}</div>
+                    </div>
+                `;
+            });
+            
+            statsGrid.innerHTML = gridHtml;
+            chartContainer.innerHTML = chartHtml;
+        }
+
+        // Очистка статистики
+        async function clearStats() {
+            if (confirm('Удалить всю статистику? Это действие необратимо.')) {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'clear' })
+                });
+                renderAdminStats();
+            }
+        }
+
+        // События
+        submitBtn.addEventListener('click', async () => {
+            if (selectedAnswers.includes(null)) return;
+            const type = calculateType(selectedAnswers);
+            currentUserType = type;
+            userResultType.textContent = type;
+            userResultDesc.textContent = descriptions[type] || 'Описание загружается...';
+            
+            await saveToGoogleSheets(type);
+            
+            testSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+        });
+
+        showAdminBtn.addEventListener('click', () => {
+            testSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            adminSection.classList.remove('hidden');
+            adminLogin.classList.remove('hidden');
+            adminStats.classList.add('hidden');
+            adminPassword.value = '';
+            accessDenied.classList.add('hidden');
+        });
+
+        userToAdminBtn.addEventListener('click', () => {
+            resultSection.classList.add('hidden');
+            adminSection.classList.remove('hidden');
+            adminLogin.classList.remove('hidden');
+            adminStats.classList.add('hidden');
+        });
+
+        backFromAdmin.addEventListener('click', () => {
+            adminSection.classList.add('hidden');
+            testSection.classList.remove('hidden');
+            isAdminAuthenticated = false;
+        });
+
+        newTestBtn.addEventListener('click', () => {
+            selectedAnswers = new Array(8).fill(null);
+            renderQuestions();
+            submitBtn.disabled = true;
+            resultSection.classList.add('hidden');
+            testSection.classList.remove('hidden');
+        });
+
+        checkPasswordBtn.addEventListener('click', () => {
+            if (adminPassword.value === ADMIN_PASSWORD) {
+                isAdminAuthenticated = true;
+                adminLogin.classList.add('hidden');
+                adminStats.classList.remove('hidden');
+                renderAdminStats();
+                accessDenied.classList.add('hidden');
+            } else {
+                accessDenied.classList.remove('hidden');
+            }
+        });
+
+        clearStatsBtn.addEventListener('click', clearStats);
+
+        // Инициализация
+        renderQuestions();
+    </script>
+</body>
+</html>
